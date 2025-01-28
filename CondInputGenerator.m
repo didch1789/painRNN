@@ -3,12 +3,14 @@ function CondInputGenerator(n_timebin)
 inoutscan      = 'OutScan';
 condavg        = true;
 make_into_prob = true; 
+real_int       = false;
+
 addpath(genpath('~/github_primes'))
 % basedir = '/Users/jungwookim/Library/CloudStorage/GoogleDrive-didch1789@gmail.com/내 드라이브/radyo_URP';
 % basedir = '/Users/jungwookim/nas02/projects/Radyo/';
 % savedir = fullfile(basedir, 'results', sprintf('radyo_240504_%s_compile_behavior', inoutscan));
 load(sprintf('%s_behavioral.mat', inoutscan), 'trials', 'x_time');
-real_int = false;
+
 
 if real_int
     condsval       = {[41 46.3 41], [41 46.9 41], [41 47.5 41], ...
@@ -56,7 +58,6 @@ for cond_i = 1:numel(condsval)
             stims = [stims(1:end-1);linspace(temperatures(1), temperatures(1), t_epoch + 1)'];
         end
     end
-
     Inputs(cond_i, :) = stims;
 end
 
