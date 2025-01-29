@@ -31,7 +31,7 @@ hidden_size   = 30  # Number of features in the hidden state
 noise_sig     = 1e-1
 learning_rate = 1e-3 
 n_epochs      = 5000
-device        = 'cpu' # mps
+device        = 'cuda' # mps
 results_name  = f'results_hdsz{hidden_size}_nepch{n_epochs}'
 # batch_size  = 50 for trial-level 9 for condition-level
 
