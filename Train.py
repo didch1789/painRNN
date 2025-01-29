@@ -16,7 +16,7 @@ param = dict()
 param['level']      = ['condition_prob'] #  'trial', 'condition', 'condition_prob', 'threshold_mdl1'
 param['activation'] = ['relu'] 
 param['outputs']    = ['Actions', 'Ratings', 'Clicks2'] # 'Actions', 'Clicks', , 'Both_MSE'
-param['alphas']     = np.linspace(0, 1, 11)
+param['alphas']     = np.linspace(0, 1, 101)
 param['alphas']     = param['alphas'][1:]
 n_alphas            = len(param['alphas'])
 
@@ -28,11 +28,11 @@ n_alphas            = len(param['alphas'])
 # FIXED PARAMS
 input_size    = 1   # Input feature size (objective temperature)
 hidden_size   = 30  # Number of features in the hidden state
-noise_sig     = 1e-2
+noise_sig     = 1e-1
 learning_rate = 1e-3 
 n_epochs      = 5000
 device        = 'cpu' # mps
-results_name  = 'results_hdsz30_nepch5000'
+results_name  = f'results_hdsz{hidden_size}_nepch{n_epochs}'
 # batch_size  = 50 for trial-level 9 for condition-level
 
 # Seed random number generator for reproducibility
