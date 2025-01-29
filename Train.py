@@ -3,7 +3,6 @@
 
 # Imports
 import torch
-import logging
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
@@ -13,15 +12,14 @@ import scipy.io as sio
 import matplotlib.pyplot as plt
 import PainRNN as PainRNN
 
-logging.basicConfig(filename='Train.log', filemode="w", level=logging.DEBUG) 
-logging.info('Train starts')
-
 param = dict()
-param['level']      = ['condition_prob'] #  'trial', 'condition'
-param['activation'] = ['relu', 'tanh']
-param['outputs']    = ['Ratings', 'Clicks2', 'Both_MSE', 'Actions'] #  'Both_MSE_CE', 'Both_MSE_sigmoidCE',
-param['alphas']     = np.linspace(0, 1, 21)
+param['level']      = ['condition_prob'] #  'trial', 'condition', 'condition_prob', 'threshold_mdl1'
+param['activation'] = ['relu'] 
+param['outputs']    = ['Actions', 'Ratings', 'Clicks2'] # 'Actions', 'Clicks', , 'Both_MSE'
+param['alphas']     = np.linspace(0, 1, 11)
+param['alphas']     = param['alphas'][1:]
 n_alphas            = len(param['alphas'])
+
 # Clicks. CE 
 # Ratings. MSE
 # Both (Ratings + Clicks). MSE + CE or MSE
@@ -29,11 +27,12 @@ n_alphas            = len(param['alphas'])
 
 # FIXED PARAMS
 input_size    = 1   # Input feature size (objective temperature)
-hidden_size   = 64  # Number of features in the hidden state
+hidden_size   = 30  # Number of features in the hidden state
 noise_sig     = 1e-2
 learning_rate = 1e-3 
-n_epochs      = 1000
-device        = 'cuda' # mps
+n_epochs      = 5000
+device        = 'cpu' # mps
+results_name  = 'results_hdsz30_nepch5000'
 # batch_size  = 50 for trial-level 9 for condition-level
 
 # Seed random number generator for reproducibility
@@ -45,7 +44,7 @@ for i_lvl, name_lvl in  enumerate(param['level']):
     for i_act, name_act in enumerate(param['activation']):
         for i_out, name_out in enumerate(param['outputs']):
             
-            targfolder  = os.path.join(os.getcwd(), 'results', f'{name_lvl}_act-{name_act}_label-{name_out}')
+            targfolder  = os.path.join(os.getcwd(), results_name, f'{name_lvl}_act-{name_act}_label-{name_out}')
             if not (os.path.isdir(targfolder)):
                 os.makedirs(targfolder)
             
@@ -67,6 +66,19 @@ for i_lvl, name_lvl in  enumerate(param['level']):
                 
             elif name_lvl == 'condition':
                 inputoutputs = sio.loadmat('InOutputs_condavg.mat')
+                Inputs   = inputoutputs['Inputs']
+                Outputs  = inputoutputs['Outputs']
+                Xnp      = np.expand_dims(Inputs, axis = 2)
+                ynp      = []
+                for cond_i in range(len(Outputs)):
+                    ynp.append(Outputs[cond_i][0])
+                ynp         = np.stack(ynp, axis = 0)
+                X = torch.from_numpy(Xnp).to(torch.float32)
+                y = torch.from_numpy(ynp).to(torch.float32)
+                batch_size = 9
+                
+            elif name_lvl == 'threshold_mdl1':
+                inputoutputs = sio.loadmat('model_v1_InOutputs_condavg.mat')
                 Inputs   = inputoutputs['Inputs']
                 Outputs  = inputoutputs['Outputs']
                 Xnp      = np.expand_dims(Inputs, axis = 2)
@@ -122,7 +134,7 @@ for i_lvl, name_lvl in  enumerate(param['level']):
             
             # Model instantiation
             for i, alpha in enumerate(param['alphas']):
-                addstr      = 'tau_%.2f' % alpha                
+                addstr      = 'tau_%.4f' % alpha                
                 loss_epochs = []
                 pain_rnn    = PainRNN.PainRNN(input_size, hidden_size, output_size, alpha, name_act, device).to(device)
                 optimizer   = optim.Adam(pain_rnn.parameters(), lr=learning_rate)
@@ -200,7 +212,7 @@ for i_lvl, name_lvl in  enumerate(param['level']):
                         
                     loss_epochs.append(loss.item())
                     if ((epoch+1) % 10) == 0:
-                        logging.info(f'Epoch [{epoch+1}/{n_epochs}], Loss: {loss.item():.4f} in {i+1} of {n_alphas}')
+                        print(f'Epoch [{epoch+1}/{n_epochs}], Loss: {loss.item():.4f} in {i+1} of {n_alphas}')
             
                 out_t, h_t = pain_rnn(torch.from_numpy(np.expand_dims(Inputs, axis = 2)).to(torch.float32))
                 out_t      = out_t.detach().numpy()
@@ -251,8 +263,9 @@ for i_lvl, name_lvl in  enumerate(param['level']):
                                 'h2h':pain_rnn.h2h.weight.detach().numpy(), 
                                 'h2o':pain_rnn.h2o.weight.detach().numpy(),
                                 'Inputs': X, 'Targets': y})
+                torch.save(pain_rnn, os.path.join(targfolder, f'pain_rnn_{addstr}.pth'))
 
                 plt.savefig(os.path.join(targfolder, ('HiddenLayers_' + addstr + '.png')))
-                logging.info(('HiddenLayers_' + addstr + '.png' + 'saved'))
+                print(('HiddenLayers_' + addstr + '.png' + 'saved'))
                 plt.close()
     
